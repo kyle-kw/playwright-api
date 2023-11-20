@@ -45,8 +45,8 @@ class Worker:
         req_data = self.pw.goto_the_url(page=self.page, **dict(pw_api))
         self.page = self.pw.page
         api_res = req_res_to_api_res(req_data)
-        
-        return api_res
+        self.send_message(api_res)
+        logger.info('子进程任务执行完成。')
 
     def worker_watch_dog(self):
         """
@@ -62,9 +62,8 @@ class Worker:
                 break
 
             logger.info('子进程获取到请求任务。')
-            res_data = self.execute(data)
-            self.send_message(res_data)
-
+            self.execute(data)
+            
     def watch_dog(self):
         t = threading.Thread(target=self.worker_watch_dog)
         t.start()

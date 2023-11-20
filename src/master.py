@@ -15,12 +15,9 @@ from utils import generation_sub_md5
 from worker import create_worker
 from pipe import ChildPipe, create_process_pipe
 from models import APIRequestModel, APIResponseModel
-# from libs.env import MAX_TASK_NUMBER, MAX_TASK_LIVE_TIME, MAX_TASK_IDLE_TIME
+from env import MAX_TASK_NUMBER, MAX_TASK_LIVE_TIME, MAX_TASK_IDLE_TIME
 from exception import InternalException, TimeoutException, HTTPException
 
-MAX_TASK_NUMBER = 10
-MAX_TASK_LIVE_TIME = 60 * 60 * 2
-MAX_TASK_IDLE_TIME = 20 * 60
 
 q_thread = queue.Queue(maxsize=MAX_TASK_NUMBER)
 
@@ -66,6 +63,7 @@ class Master:
         self.thread_info = {}
 
         self.manager_thread = None
+        self.watch_thread = None
 
     def create_subprocess(self, task_id=None):
         """
@@ -171,32 +169,63 @@ class Master:
                         return task_info_
 
             time.sleep(random.random() + 0.1)
-        return InternalException("获取子进程失败")
-
-    def sub_thread(self, task: Task):
+        raise InternalException("获取子进程失败")
+    
+    def check_use_thread(self):
         with self.thread_lock2:
             if self.thread_num >= self.max_task_number:
-                task.pipe.send()  # Error
-                return
-            self.thread_num += 1
+                return False
+            else:
+                self.thread_num += 1
+                return True
+
+    def sub_thread(self, task: Task):
+        now = time.time()
+
+        check_status = False
+        while (time.time() - now) > 10:
+            check_status = self.check_use_thread()
+            if check_status:
+                break
+            time.sleep(random.random() + 0.1)
+        
+        if not check_status:
+            task.pipe.send(TimeoutException("线程等待超时"))
+            return
 
         try:
             task.cond.acquire()
             if task.flag == 0:
                 task.cond.wait()
             task.cond.release()
-            data: APIRequestModel = task.pipe.recv()
+            data: APIRequestModel = task.pipe.recv(1)
+            if not data:
+                raise TimeoutException("线程接收超时")
+
             task_md5 = generation_sub_md5(data)
             # 执行data任务
-            subprocess_info: SubprocessInfo = self.get_one_alive_subprocess(task_md5=task_md5)
+            subprocess_info: SubprocessInfo = self.get_one_alive_subprocess(task_md5=task_md5, timeout=10)
+            if (time.time() - now) >= data.timeout:
+                raise TimeoutException("子线程已执行超时，不发送给子进程执行任务")
+
+            real_timeout = data.timeout - (time.time() - now)
+            data.timeout = real_timeout
             subprocess_info.pipe.send(data)
             if not subprocess_info.task_md5:
                 subprocess_info.task_md5 = task_md5
 
-            res: APIResponseModel = subprocess_info.pipe.recv(30)
+            res: APIResponseModel = subprocess_info.pipe.recv(real_timeout+0.5)
+
             self.update_subprocess_status(subprocess_info.task_id, TaskState.idle)
 
             task.pipe.send(res)
+        except Exception as e:
+            try:
+                task.pipe.send(e)
+            except:
+                pass
+            
+            logger.exception(e)
         finally:
             with self.thread_lock2:
                 self.thread_num -= 1
@@ -214,6 +243,20 @@ class Master:
             task: Task = q_thread.get()
             logger.info('获取到api接口任务，准备执行任务。')
             self.execute(task)
+    
+    def daemon_thread(self):
+        while True:
+            if not self.manager_thread or not self.manager_thread.is_alive():
+                manager_subprocess = threading.Thread(target=self.manager_subprocess)
+                manager_subprocess.start()
+                self.manager_thread = manager_subprocess
+            
+            if not self.watch_thread or not self.watch_thread.is_alive():
+                watch_dog = threading.Thread(target=self.watch_dog)
+                watch_dog.start()
+                self.watch_thread = watch_dog
+            
+            time.sleep(1)
 
     def start(self):
         # 子进程管理
@@ -223,10 +266,13 @@ class Master:
 
         watch_dog = threading.Thread(target=self.watch_dog)
         watch_dog.start()
+        self.watch_thread = watch_dog
+
+        daemon_task = threading.Thread(target=self.daemon_thread)
+        daemon_task.setDaemon(True)
+        daemon_task.start()
 
         logger.info('master 初始化完成。')
-        # 监听队列消息
-        # self.watch_dog()
 
 
 def master_start():

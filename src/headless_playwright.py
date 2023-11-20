@@ -1,11 +1,12 @@
 
 import time
+from pathlib import Path
+from loguru import logger
+from typing import List, Union, Optional, Dict
+
 from playwright.sync_api import sync_playwright, Page, Route, ProxySettings
 from playwright_stealth import stealth_sync
-from typing import List, Union, Optional, Dict
-from pathlib import Path
-# from functools import partial
-from loguru import logger
+
 
 class BrowserType:
     chromium = 'chromium'
@@ -228,8 +229,7 @@ class PlaywrightHandler:
             self._clean_save_stack()
             page_global_hook = Partial(self.handle_route,
                                         ignore_resource=ignore_resource, 
-                                        save_stack=save_stack
-                                        )
+                                        save_stack=save_stack)
 
             page.route("**/*", page_global_hook)
             logger.info('hook all request.')
@@ -269,16 +269,17 @@ class PlaywrightHandler:
                     **kwargs):
         """
         跳转到指定的url
+        支持：
             1. 指定url
-            2. 设置cookies  context.add_cookies
-            3. 设置headers  page.set_extra_http_headers
-            4. 执行指定js   page.evaluate
-            5. 页面级代理  (上下文级代理, 类似于无痕浏览器) context = browser.new_context(proxy={"server": "socks5://spider-s0cks5User:pwd958j3Y42d2dssq@192.168.184.10:21101"})
-            6. 是否允许缓存  page.set_extra_http_headers({"Cache-Control": "no-cache"})
-            7. 等待元素  page.wait_for_selector
-            8. 请求堆栈  page.on("request", handle_request)
-            9. 忽略资源  page.route("**/*.{png,jpg,jpeg}", lambda route: route.abort())
-            10. iframe 标签替换？
+            2. 设置cookies  
+            3. 设置headers  
+            4. 执行指定js   
+            5. 页面级代理  (上下文级代理, 类似于无痕浏览器） 
+            6. 是否允许缓存  
+            7. 等待元素  
+            8. 请求堆栈  
+            9. 忽略资源  
+            10. iframe 标签替换
 
         """
         # todo 页面管理？
@@ -365,7 +366,6 @@ def playwright_test():
         # 'url': 'http://zhaobiao.jsph.org.cn/supplier/release/cgInfoList?pageNo=4&pageSize=10',
         # 'save_stack': True,
         # 'proxy': 'socks5://spider-s0cks5User:pwd958j3Y42d2dssq@192.168.184.10:21101',
-        # 'proxy': 'http://130.252.36.88:7890',
         # "wait_for_selector": '#detailUrl',
         # 'use_cache': False,
         # 'timeout': 5,
