@@ -109,7 +109,7 @@ class PlaywrightAPI(BaseModel):
     exec_js: Union[str, None]=None
     exec_js_args: Union[str, None]=None
     sleep:Union[int, None]=0
-    timeout: Union[int, None]=30
+    timeout: Union[int, float, None]=30
 
 
 def api_request_test():

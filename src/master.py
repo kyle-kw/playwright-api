@@ -183,7 +183,7 @@ class Master:
         now = time.time()
 
         check_status = False
-        while (time.time() - now) > 10:
+        while (time.time() - now) < 10:
             check_status = self.check_use_thread()
             if check_status:
                 break
