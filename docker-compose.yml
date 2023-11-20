@@ -1,0 +1,10 @@
+version: "2.1"
+services:
+  flaresolverr:
+    #image: ccr.ccs.tencentyun.com/zhongbiao/playwright-demo:1.0.1
+    image: ccr.ccs.tencentyun.com/zhongbiao/playwright-demo-new:1.0.1
+    container_name: playwright-demo
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
