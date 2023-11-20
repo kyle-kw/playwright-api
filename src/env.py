@@ -11,7 +11,7 @@ def get_env(env_name, default=None, required=False, arg_formatter=None):
     if arg_formatter is not None:
         rv = arg_formatter(rv)
 
-    logger.info("'{}' uses value: {}".format(env_name, default))
+    logger.info("'{}' uses value: {}".format(env_name, rv))
 
     return rv
 

@@ -2,3 +2,4 @@ fastapi[all]
 loguru
 playwright
 playwright-stealth
+sentry-sdk[fastapi]

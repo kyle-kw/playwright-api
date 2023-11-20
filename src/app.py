@@ -14,6 +14,15 @@ from pipe import create_process_pipe
 from models import APIRequestModel
 from exception import TimeoutException
 
+from env import OPEN_SENTRY, SENTRY_NSD
+
+if OPEN_SENTRY:
+    import sentry_sdk
+
+    sentry_sdk.init(
+        dsn=SENTRY_NSD,
+        traces_sample_rate=1.0,
+    )
 
 app = FastAPI()
 

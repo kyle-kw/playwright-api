@@ -135,7 +135,7 @@ class Master:
             is_not_usable = (
                     len([1 for _, t in self.subprocess_lst.items()
                          if t.task_state == TaskState.idle]) == 0
-                    and self.subprocess_num <= self.max_task_number
+                    and self.subprocess_num < self.max_task_number
             )
             if not self.subprocess_lst or is_not_usable:
                 self.create_subprocess()
