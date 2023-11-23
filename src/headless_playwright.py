@@ -1,11 +1,13 @@
 
 import time
+import subprocess
 from pathlib import Path
 from loguru import logger
 from typing import List, Union, Optional, Dict
 
 from playwright.sync_api import sync_playwright, Page, Route, ProxySettings
 from playwright_stealth import stealth_sync
+from pjstealth import stealth_sync
 
 
 class BrowserType:
@@ -73,6 +75,7 @@ class PlaywrightHandler:
         self.context = None
         self.page = None
         self.save_stack = None
+        self.user_agent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36'
         logger.info('start init playwright browser finish.')
 
     def _get_browser_type(self, browser_type: str=BrowserType.firefox):
@@ -149,10 +152,14 @@ class PlaywrightHandler:
             server: 'http://per-context' } })`.
         kwargs： 其他参数
         """
+        if user_agent is None:
+            user_agent = self.user_agent
+
         self.context = self.browser.new_context(
             user_agent=user_agent,
             extra_http_headers=extra_http_headers,
             proxy=proxy,
+            ignore_https_errors=True,
             **kwargs
         )
 

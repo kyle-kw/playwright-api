@@ -1,4 +1,5 @@
 
+import socket
 import time
 import queue
 import random
@@ -11,7 +12,7 @@ from typing import Dict
 from dataclasses import dataclass
 from loguru import logger
 
-from utils import generation_sub_md5
+from utils import generation_sub_md5, get_unused_port
 from worker import create_worker
 from pipe import ChildPipe, create_process_pipe
 from models import APIRequestModel, APIResponseModel
@@ -55,12 +56,12 @@ class Master:
         self.max_task_idle = MAX_TASK_IDLE_TIME
 
         self.subprocess_num = 0
-        self.subprocess_lst: Dict[str, SubprocessInfo] = {}  # 保留子线程的任务
+        self.subprocess_lst: Dict[str, SubprocessInfo] = dict()  # 保留子线程的任务
         self.thread_lock = threading.RLock()
         self.thread_lock2 = threading.Lock()
 
         self.thread_num = 0
-        self.thread_info = {}
+        self.thread_info = dict()
 
         self.manager_thread = None
         self.watch_thread = None
@@ -70,8 +71,8 @@ class Master:
         创建子进程，并记录子进程信息
         """
         p_pipe, c_pipe = create_process_pipe()
-
-        task = multiprocessing.Process(target=create_worker, args=(c_pipe,))
+        unused_port = get_unused_port()
+        task = multiprocessing.Process(target=create_worker, args=(c_pipe, unused_port))
         task.start()
 
         with self.thread_lock:
@@ -129,6 +130,7 @@ class Master:
                         continue
 
                     task_info.task.kill()
+                    # task_info.task.wait(1)
                     self.subprocess_lst.pop(task_id, '')
                 self.subprocess_num = len(self.subprocess_lst)
 
