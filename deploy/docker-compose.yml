@@ -1,0 +1,78 @@
+version: "2.3"
+
+x-service-common:
+  &service-common
+  image: ccr.ccs.tencentyun.com/zhongbiao/playwright-api:1.0.2
+  environment:
+    - MAX_TASK_NUMBER=10
+    - MAX_TASK_LIVE_TIME=3600
+    - MAX_TASK_IDLE_TIME=1200
+    - PORT=8000
+  
+  cpu_count: 2
+  cpus: 2
+  mem_limit: 3G
+  restart: always
+
+  healthcheck:
+    # 健康检查 判断socks5 是否可用
+    test:
+      [
+          "CMD-SHELL",
+          "curl --fail --location --request POST 'http://0.0.0.0:8000/get_content' --header 'Content-Type: application/json' --data-raw ' {\"url\":\"http://127.0.0.1:8000/ping\",\"options\":{\"cache_enabled\":true,\"sdk_version\":\"1.0\"}}' || exit 1 "
+      ]
+    interval: 20s
+    timeout: 120s
+    retries: 6
+    start_period: 30s
+  
+  logging:
+    driver: json-file
+    options:
+      max-size: 10m
+      max-file: '10'
+
+services:
+  playwright-api1:
+    <<: *service-common
+    container_name: playwright-api1
+    ports:
+      - 28001:8000
+
+  playwright-api2:
+    <<: *service-common
+    container_name: playwright-api2
+    ports:
+      - 28002:8000
+
+  playwright-api3:
+    <<: *service-common
+    container_name: playwright-api3
+    ports:
+      - 28003:8000
+  
+  autoheal:
+    # 自动重启不健康容器
+    restart: always
+    image: willfarrell/autoheal
+    container_name: playwright-autoheal
+    environment:
+      - AUTOHEAL_CONTAINER_LABEL=all
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+  
+  openresty:
+    restart: always
+    image: openresty/openresty:stretch
+    container_name: playwright-openresty
+    mem_limit: 1024M
+    ports:
+      - 23333:23333
+    volumes:
+      - ./log:/var/log/nginx
+      - ./nginx.conf:/etc/openresty/nginx.conf
+    logging:
+      driver: json-file
+      options:
+        max-size: 100m
+        max-file: '10'

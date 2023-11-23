@@ -38,7 +38,7 @@ def ping():
     return "PONG"
 
 
-@app.post("/get-content")
+@app.post("/get_content")
 def get_content(api_req: APIRequestModel):
     # 创建任务
     p_pipe, c_pipe = create_process_pipe()

@@ -3,6 +3,8 @@
 # @Time   : 2023/10/31 09:44
 # @Author : huangkewei
 
+import random
+import socket
 import json
 import hashlib
 
@@ -62,6 +64,19 @@ def generation_sub_md5(data: APIRequestModel) -> str:
 
     return md5_string
 
+
+def get_unused_port():
+    while True:
+        port = random.randint(10000, 20000)  # 选择一个随机端口号
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
+            sock.bind(('localhost', port))  # 尝试绑定到该端口
+            sock.close()
+            return port  # 绑定成功，返回该端口号
+        except OSError:
+            continue  # 端口已被占用，继续尝试下一个端口号
+
+        
 def worker_test_3():
     json_data = {
         'url': 'https://sdbhgj.youzhicai.com/index/Notice.html?id=2ed513c0-bc27-45ed-8d82-a200d52f54f7&n=1'
