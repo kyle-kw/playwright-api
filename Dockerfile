@@ -8,6 +8,8 @@ RUN apt-get update && \
     pip install playwright && \
     playwright install --with-deps
 
+RUN chmod +x /bin/gost
+
 WORKDIR /app
 
 COPY requirements.txt .
