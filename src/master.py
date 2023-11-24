@@ -12,7 +12,7 @@ from typing import Dict
 from dataclasses import dataclass
 from loguru import logger
 
-from utils import generation_sub_md5, get_unused_port
+from utils import generation_sub_md5, get_unused_port, kill_pid
 from worker import create_worker
 from pipe import ChildPipe, create_process_pipe
 from models import APIRequestModel, APIResponseModel
@@ -126,10 +126,16 @@ class Master:
             if need_kill_id:
                 for task_id, task_info in need_kill_id:
                     if task_info.task_state == TaskState.with_destroyed:
+                        pid = task_info.task.pid
                         task_info.pipe.send('kill')
+                        task_info.task.join(1)
+                        kill_pid(pid)
                         continue
-
+                    
+                    pid = task_info.task.pid
                     task_info.task.kill()
+                    task_info.task.join(1)
+                    kill_pid(pid)
                     self.subprocess_lst.pop(task_id, '')
                 self.subprocess_num = len(self.subprocess_lst)
 

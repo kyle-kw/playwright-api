@@ -8,8 +8,8 @@ import multiprocessing
 from uuid import uuid1
 from loguru import logger
 from playwright.sync_api import Page
-
-from utils import api_request_to_pw_api, req_res_to_api_res
+from headless_playwright import PlaywrightHandler
+from utils import api_request_to_pw_api, req_res_to_api_res, kill_pid
 
 from pipe import ChildPipe, create_process_pipe
 from models import APIRequestModel, APIResponseModel, PlaywrightAPI
@@ -17,14 +17,13 @@ from models import APIRequestModel, APIResponseModel, PlaywrightAPI
 
 class Worker:
     def __init__(self, c_pipe: ChildPipe, port=None):
-        from headless_playwright import PlaywrightHandler
-
         self.c_pipe = c_pipe
         self.session_id = None
         self.pw: PlaywrightHandler = PlaywrightHandler()
         self.page: Page = None
         self.sock_pipe = None
         self.port = port
+        self.proxy_url = None
 
     def destroy(self):
         """
@@ -35,13 +34,7 @@ class Worker:
             self.pw.close_context()
             self.pw.close_browser()
 
-        if self.sock_pipe:
-            try:
-                self.sock_pipe.send_signal(9)
-                self.sock_pipe.wait(timeout=1)
-                logger.info(f"子进程gost sock5转发关闭。pid: {self.sock_pipe.pid}")
-            except Exception as e:
-                logger.error(f"子进程gost sock5转发关闭失败。pid: {self.sock_pipe.pid}")
+        self.destroy_sock_pipe()
 
     def send_message(self, res_msg: APIResponseModel):
         """
@@ -66,7 +59,28 @@ class Worker:
             self.port = random.randint(20000, 30000)
 
         self.sock_pipe = self.subprocess_sock_pipe(self.port, sock_url)
+        self.proxy_url = sock_url
 
+    def destroy_sock_pipe(self):
+        if self.sock_pipe:
+            try:
+                pid = self.sock_pipe.pid
+                self.sock_pipe.send_signal(9)
+                self.sock_pipe.wait(timeout=1)
+                kill_pid(pid)
+                logger.info(f"子进程gost sock5转发关闭。pid: {self.sock_pipe.pid}")
+            except Exception as e:
+                logger.error(f"子进程gost sock5转发关闭失败。pid: {self.sock_pipe.pid}")
+    
+    def update_sock_pipe(self, sock_url):
+        if not sock_url:
+            return
+        
+        if sock_url != self.proxy_url:
+            self.destroy_sock_pipe()
+            self.create_sock_pipe(sock_url)
+            logger.info(f"gost 更新，新sock5代理：{sock_url}")
+            
     def execute(self, req: APIRequestModel) -> APIResponseModel:
         """
         执行接收过来的信息
@@ -77,7 +91,9 @@ class Worker:
 
         if pw_api.proxy and not self.sock_pipe:
             self.create_sock_pipe(pw_api.proxy)
-
+        elif pw_api.proxy and self.sock_pipe and pw_api.proxy != self.proxy_url:
+            self.update_sock_pipe(pw_api.proxy)
+        
         if pw_api.proxy:
             pw_api.proxy = f'http://127.0.0.1:{self.port}'
 

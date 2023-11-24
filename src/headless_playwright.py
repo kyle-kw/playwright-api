@@ -254,9 +254,15 @@ class PlaywrightHandler:
             return 
 
         for frame in frames_lst[1:]:
-            content = frame.content()
-            page.eval_on_selector(f'#{frame.name}', "(e, content) => e.outerHTML=content", content)
-            # page.evaluate(f'(frame) => {{frame.outerHTML = `{content}`;}}', page.query_selector(f'#{frame.name}'))
+            try:
+                content = frame.content()
+                frame_name = frame.name
+                if not frame_name:
+                    continue
+                page.eval_on_selector(f'#{frame_name}', "(e, content) => e.outerHTML=content", content)
+                # page.evaluate(f'(frame) => {{frame.outerHTML = `{content}`;}}', page.query_selector(f'#{frame.name}'))
+            except Exception as e:
+                logger.exception(e)
 
     def goto_the_url(self, 
                     url: str,
@@ -289,7 +295,7 @@ class PlaywrightHandler:
             10. iframe 标签替换
 
         """
-        # todo 页面管理？
+        start_time = time.time()
         if not self.page:
             self.page = page
 
@@ -311,19 +317,24 @@ class PlaywrightHandler:
             
         if not self.page:
             raise Exception("page create fail.")
+        real_timeout = timeout - (time.time()-start_time)
+        if real_timeout < 0:
+            raise Exception("get url timeout.")
+        
+        self.page.goto(url, timeout=real_timeout*1000)
 
-        self.page.goto(url)
-
-        if sleep:
+        if sleep and (timeout - (time.time()-start_time)) > 0:
             time.sleep(sleep)
 
-        if wait_for_selector:
+        if wait_for_selector and (timeout - (time.time()-start_time)) > 0:
             self.page.wait_for_selector(wait_for_selector, timeout=timeout*1000)
         
-        if exec_js:
+        if exec_js and (timeout - (time.time()-start_time)) > 0:
             self.page.evaluate(exec_js, exec_js_args)
 
-        self.replace_iframe_element(self.page)
+        if (timeout - (time.time()-start_time)) > 0:
+            self.replace_iframe_element(self.page)
+            
         content = self.page.content()
         cookies = self.context.cookies()
 
@@ -369,14 +380,14 @@ def playwright_test():
     pw = PlaywrightHandler()
     kwargs = {
         # 'url': 'http://myip.ipip.net',
-        'url': 'http://sdbhgj.youzhicai.com/index/Notice.html?id=2ed513c0-bc27-45ed-8d82-a200d52f54f7&n=1',
+        'url': 'http://news.e-works.net.cn/category912/news105194.htm',
         # 'url': 'http://zhaobiao.jsph.org.cn/supplier/release/cgInfoList?pageNo=4&pageSize=10',
         # 'save_stack': True,
         # 'proxy': 'socks5://spider-s0cks5User:pwd958j3Y42d2dssq@192.168.184.10:21101',
         # "wait_for_selector": '#detailUrl',
         # 'use_cache': False,
         # 'timeout': 5,
-        'sleep': 3,
+        # 'sleep': 3,
     }
     data = pw.goto_the_url(**kwargs)
     print(data['content'])

@@ -7,6 +7,7 @@ import random
 import socket
 import json
 import hashlib
+import psutil
 
 from loguru import logger
 
@@ -54,7 +55,8 @@ def generation_sub_md5(data: APIRequestModel) -> str:
         'user_agent': data.user_agent,
         'cookies': data.cookies,
         'headers': data.headers,
-        'proxy': data.request_proxy,
+        # 'proxy': data.request_proxy,
+        'proxy': True if data.request_proxy else False,
         'use_cache': data.cache_enabled,
         'save_stack': data.print_stack,
         'ignore_resource': data.ignore_resource,
@@ -76,7 +78,20 @@ def get_unused_port():
         except OSError:
             continue  # 端口已被占用，继续尝试下一个端口号
 
-        
+
+def check_pid_exist(pid):
+
+    return psutil.pid_exists(pid=pid)
+
+
+def kill_pid(pid):
+    if not check_pid_exist(pid):
+        return
+    p = psutil.Process(pid)
+    p.terminal()
+    p.wait()
+
+
 def worker_test_3():
     json_data = {
         'url': 'https://sdbhgj.youzhicai.com/index/Notice.html?id=2ed513c0-bc27-45ed-8d82-a200d52f54f7&n=1'

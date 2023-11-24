@@ -4,3 +4,4 @@ playwright
 playwright-stealth
 sentry-sdk[fastapi]
 pjstealth
+psutil
