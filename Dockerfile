@@ -4,11 +4,13 @@ RUN pip install playwright && \
     playwright install --with-deps
 
 WORKDIR /app
+
+COPY gost /opt
+ENV PATH=/opt:$PATH
+
 COPY requirements.txt .
 
 RUN pip install -r requirements.txt
-
-RUN pip install pjstealth
 
 COPY src .
 
