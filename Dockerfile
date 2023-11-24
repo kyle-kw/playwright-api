@@ -1,18 +1,18 @@
 FROM mcr.microsoft.com/devcontainers/python:0-3.11
 
-RUN pip install playwright && \
-    playwright install --with-deps
-
 RUN apt-get update && \
-    apt-get install -y dumb-init
-
-COPY gost /opt
-ENV PATH=/opt:$PATH
+    apt-get install -y dumb-init wget && \
+    wget https://github.com/ginuerzh/gost/releases/download/v2.11.5/gost-linux-amd64-2.11.5.gz && \
+    gzip -d gost-linux-amd64-2.11.5.gz && \
+    mv gost-linux-amd64-2.11.5 /bin/gost && \
+    pip install playwright && \
+    playwright install --with-deps
 
 WORKDIR /app
 
 COPY requirements.txt .
-RUN pip install -r requirements.txt
+RUN pip install -r requirements.txt && \
+    rm -rf /root/.cache
 
 COPY src .
 
