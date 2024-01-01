@@ -43,7 +43,7 @@ class Worker:
         self.c_pipe.send(res_msg)
 
     def subprocess_sock_pipe(self, local_port, sock_url):
-        subprocess_cmd = (f"gost -L :{local_port} -F {sock_url}")
+        subprocess_cmd = f"gost -L :{local_port} -F {sock_url}"
         logger.info(subprocess_cmd)
         process = subprocess.Popen(subprocess_cmd.split())
         logger.info(f"子进程gost sock5转发启动。pid: {process.pid}")

@@ -14,52 +14,57 @@ from loguru import logger
 from models import APIRequestModel, APIResponseModel, PlaywrightAPI
 
 
-
 def api_request_to_pw_api(req: APIRequestModel) -> PlaywrightAPI:
     # 根据信息转换为PlaywrightAPI
-
+    url = str(req.url)
+    cookies = None
+    if req.options.cookies:
+        cookies = [
+            {'name': k, 'value': v, 'url': url} for k, v in req.options.cookies.items()
+        ]
     json_data = {
         'url': str(req.url),
-        'user_agent': req.user_agent,
-        'cookies': req.cookies,
-        'headers': req.headers,
-        'proxy': req.request_proxy,
-        'use_cache': req.cache_enabled,
-        'save_stack': req.print_stack,
-        'ignore_resource': req.ignore_resource,
-        'wait_for_selector': req.select_expression,
-        'exec_js': req.code,
-        'exec_js_args': req.context or None,
-        'sleep': req.sleep,
-        'timeout': req.timeout,
+        'user_agent': req.options.user_agent,
+        'cookies': cookies,
+        'headers': req.options.headers,
+        'proxy': req.options.request_proxy,
+        'use_cache': req.options.cache_enabled,
+        'save_stack': req.options.print_stack,
+        'ignore_resource': req.options.ignore_resource,
+        'wait_for_selector': req.options.select_expression,
+        'exec_js': req.options.code,
+        'exec_js_args': req.options.context or None,
+        'sleep': int(req.options.sleep / 1000),
+        'timeout': int(req.gotoOptions.timeout / 1000),
     }
 
     pw_api = PlaywrightAPI(**json_data)
 
     return pw_api
 
-def req_res_to_api_res(res: dict) -> APIResponseModel:
 
+def req_res_to_api_res(res: dict) -> APIResponseModel:
     json_data = {
         'msg': 'success' if res['content'] else 'err',
         'content': res['content'],
-        'cookies': {d['name']:d['value'] for d in res['cookies']},
+        'cookies': {d['name']: d['value'] for d in res['cookies']},
     }
 
     api_res = APIResponseModel(**json_data)
 
     return api_res
 
+
 def generation_sub_md5(data: APIRequestModel) -> str:
     main_param = {
-        'user_agent': data.user_agent,
-        'cookies': data.cookies,
-        'headers': data.headers,
-        # 'proxy': data.request_proxy,
-        'proxy': True if data.request_proxy else False,
-        'use_cache': data.cache_enabled,
-        'save_stack': data.print_stack,
-        'ignore_resource': data.ignore_resource,
+        'user_agent': data.options.user_agent,
+        'cookies': data.options.cookies,
+        'headers': data.options.headers,
+        # 'proxy': data.options.request_proxy,
+        'proxy': True if data.options.request_proxy else False,
+        'use_cache': data.options.cache_enabled,
+        'save_stack': data.options.print_stack,
+        'ignore_resource': data.options.ignore_resource,
     }
     main_json = json.dumps(main_param)
     md5_string = hashlib.md5(main_json.encode('utf-8')).hexdigest()
@@ -80,7 +85,6 @@ def get_unused_port():
 
 
 def check_pid_exist(pid):
-
     return psutil.pid_exists(pid=pid)
 
 

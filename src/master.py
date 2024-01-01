@@ -206,24 +206,29 @@ class Master:
                 task.cond.wait()
             task.cond.release()
             data: APIRequestModel = task.pipe.recv(1)
+            req_timeout = int(data.gotoOptions.timeout / 1000)
             if not data:
                 raise TimeoutException("线程接收超时")
 
             task_md5 = generation_sub_md5(data)
             # 执行data任务
             subprocess_info: SubprocessInfo = self.get_one_alive_subprocess(task_md5=task_md5, timeout=10)
-            if (time.time() - now) >= data.timeout:
+            if (time.time() - now) >= req_timeout:
                 raise TimeoutException("子线程已执行超时，不发送给子进程执行任务")
 
-            real_timeout = data.timeout - (time.time() - now)
-            data.timeout = real_timeout
+            real_timeout = req_timeout - (time.time() - now)
+            data.gotoOptions.timeout = real_timeout * 1000
             subprocess_info.pipe.send(data)
             if not subprocess_info.task_md5:
                 subprocess_info.task_md5 = task_md5
 
             res: APIResponseModel = subprocess_info.pipe.recv(real_timeout+0.5)
 
-            self.update_subprocess_status(subprocess_info.task_id, TaskState.idle)
+            update_status = TaskState.idle
+            # if not res:
+            #     update_status = TaskState.with_destroyed
+
+            self.update_subprocess_status(subprocess_info.task_id, update_status)
 
             task.pipe.send(res)
         except Exception as e:

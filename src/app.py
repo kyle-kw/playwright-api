@@ -39,6 +39,7 @@ def ping():
 
 
 @app.post("/get_content")
+@app.post("/get_cookies")
 def get_content(api_req: APIRequestModel):
     # 创建任务
     p_pipe, c_pipe = create_process_pipe()
@@ -54,7 +55,7 @@ def get_content(api_req: APIRequestModel):
     task.cond.release()
     logger.info('发送具体任务')
 
-    data = p_pipe.recv(api_req.timeout)
+    data = p_pipe.recv(int(api_req.gotoOptions.timeout / 1000))
     if data is None:
         raise TimeoutException("请求超时！")
     elif isinstance(data, HTTPException):
