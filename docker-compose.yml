@@ -1,10 +1,45 @@
-version: "2.1"
+version: "2.3"
+
 services:
-  flaresolverr:
-    #image: ccr.ccs.tencentyun.com/zhongbiao/playwright-demo:1.0.1
-    image: ccr.ccs.tencentyun.com/zhongbiao/playwright-demo-new:1.0.1
+  playwright-demo:
+    image: playwright-api:1.0.0
     container_name: playwright-demo
     ports:
       - "8000:8000"
-    restart: unless-stopped
+    environment:
+      - MAX_TASK_NUMBER=10
+      - MAX_TASK_LIVE_TIME=3600
+      - MAX_TASK_IDLE_TIME=1200
+      - PORT=8000
+    cpu_count: 2
+    cpus: 2
+    mem_limit: 3G
+    restart: always
+    healthcheck:
+      # 健康检查 判断socks5 是否可用
+      test:
+        [
+          "CMD-SHELL",
+          "curl --fail --location --request POST 'http://0.0.0.0:8000/get_content' --header 'Content-Type: application/json' --data-raw ' {\"url\":\"http://127.0.0.1:8000/ping\",\"options\":{\"cache_enabled\":true,\"sdk_version\":\"1.0\"}}' || exit 1 "
+        ]
+      interval: 20s
+      timeout: 120s
+      retries: 6
+      start_period: 30s
+
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '10'
+
+  autoheal:
+    # 自动重启不健康容器
+    restart: always
+    image: willfarrell/autoheal
+    container_name: playwright-autoheal
+    environment:
+      - AUTOHEAL_CONTAINER_LABEL=all
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
 
