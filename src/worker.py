@@ -8,7 +8,7 @@ import multiprocessing
 from uuid import uuid1
 from loguru import logger
 from playwright.sync_api import Page
-from headless_playwright import PlaywrightHandler
+# from headless_playwright import PlaywrightHandler
 from utils import api_request_to_pw_api, req_res_to_api_res, kill_pid
 
 from pipe import ChildPipe, create_process_pipe
@@ -17,6 +17,8 @@ from models import APIRequestModel, APIResponseModel, PlaywrightAPI
 
 class Worker:
     def __init__(self, c_pipe: ChildPipe, port=None):
+        from headless_playwright import PlaywrightHandler
+        
         self.c_pipe = c_pipe
         self.session_id = None
         self.pw: PlaywrightHandler = PlaywrightHandler()
@@ -98,6 +100,7 @@ class Worker:
             pw_api.proxy = f'http://127.0.0.1:{self.port}'
 
         if not self.pw:
+            from headless_playwright import PlaywrightHandler
             self.pw = PlaywrightHandler()
 
         req_data = self.pw.goto_the_url(page=self.page, **dict(pw_api))

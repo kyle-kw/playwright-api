@@ -14,8 +14,10 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install -r requirements.txt
 
+RUN pip install flask
+
 COPY src .
 
-ENTRYPOINT ["dumb-init", "--", "python", "main.py"]
+ENTRYPOINT ["dumb-init", "--", "python", "main_v2.py"]
 
 # docker build . -t ccr.ccs.tencentyun.com/zhongbiao/playwright-api:1.2.1

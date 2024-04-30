@@ -6,8 +6,8 @@ from loguru import logger
 from typing import List, Union, Optional, Dict
 
 from playwright.sync_api import sync_playwright, Page, Route, ProxySettings
-from playwright_stealth import stealth_sync
-from pjstealth import stealth_sync
+# from playwright_stealth import stealth_sync
+# from pjstealth import stealth_sync
 
 
 class BrowserType:
@@ -97,6 +97,9 @@ class PlaywrightHandler:
         """
         context 拦截器 在创建page对象后执行
         """
+        from playwright_stealth import stealth_sync
+        from pjstealth import stealth_sync
+        
         stealth_sync(page)  # 浏览器伪造
         page.evaluate('''() =>{
                        Object.defineProperties(navigator,{
