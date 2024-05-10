@@ -231,6 +231,10 @@ class Master:
             self.update_subprocess_status(subprocess_info.task_id, update_status)
 
             task.pipe.send(res)
+            pid = subprocess_info.task.pid
+            subprocess_info.pipe.send('kill')
+            subprocess_info.task.join(1)
+            kill_pid(pid)
         except Exception as e:
             try:
                 task.pipe.send(e)
